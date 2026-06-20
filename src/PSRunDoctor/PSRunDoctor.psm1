@@ -62,6 +62,8 @@ function Invoke-PSRunDoctor {
 
         [string[]]$ScriptArguments = @(),
 
+        [string]$InputText,
+
         [switch]$SuppressPowerShellUpdateCheck
     )
 
@@ -104,9 +106,29 @@ function Invoke-PSRunDoctor {
 
     $blocked = Test-PSRDMarkOfTheWeb -LiteralPath $resolvedScript
     Write-Host "Downloaded file marker: $blocked"
+    Write-Host "Interactive input supplied: $(-not [string]::IsNullOrEmpty($InputText))"
 
     if ($blocked) {
         Write-Host "Suggestion: run Unblock-File -LiteralPath '$resolvedScript' if you trust this script."
+    }
+
+    $scriptText = Get-Content -LiteralPath $resolvedScript -Raw -ErrorAction SilentlyContinue
+    if ($scriptText -match 'Read-Host' -and [string]::IsNullOrEmpty($InputText)) {
+        Write-Host 'Suggestion: this script uses Read-Host. If it waits for input, run it from a console or provide preset answers in PS Run Doctor.'
+    }
+
+    if ($scriptText -match 'C:Users\\') {
+        Write-Host 'Suggestion: a path in the script looks like C:Users\. Windows absolute paths normally start with C:\Users\.'
+    }
+
+    if ($scriptText -match 'Excel\.Application') {
+        try {
+            $excelType = [type]::GetTypeFromProgID('Excel.Application')
+            Write-Host "Excel COM available: $($null -ne $excelType)"
+        }
+        catch {
+            Write-Host 'Excel COM available: False'
+        }
     }
 
     Write-PSRDSection 'Run Target'
@@ -116,6 +138,7 @@ function Invoke-PSRunDoctor {
     $psi.UseShellExecute = $false
     $psi.RedirectStandardOutput = $true
     $psi.RedirectStandardError = $true
+    $psi.RedirectStandardInput = $true
 
     if ($SuppressPowerShellUpdateCheck) {
         $psi.Environment['POWERSHELL_UPDATECHECK'] = 'Off'
@@ -133,6 +156,16 @@ function Invoke-PSRunDoctor {
     }
 
     $process = [Diagnostics.Process]::Start($psi)
+
+    if (-not [string]::IsNullOrEmpty($InputText)) {
+        $process.StandardInput.Write($InputText)
+        if (-not $InputText.EndsWith("`n")) {
+            $process.StandardInput.WriteLine()
+        }
+    }
+
+    $process.StandardInput.Close()
+
     $stdout = $process.StandardOutput.ReadToEnd()
     $stderr = $process.StandardError.ReadToEnd()
     $process.WaitForExit()

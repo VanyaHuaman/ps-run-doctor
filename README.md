@@ -1,92 +1,176 @@
 # PS Run Doctor
 
-PS Run Doctor is a PowerShell 7 helper for diagnosing what happened when someone tried to run a `.ps1` script on Windows.
+PS Run Doctor is a Windows helper for running `.ps1` scripts with PowerShell 7 and collecting troubleshooting information.
 
-It is built for a common confusing case: PowerShell prints an update notification such as:
-
-```text
-A new PowerShell variant is available! Please update to the latest version of PowerShell for new features and improvements!
-```
-
-That message can appear at PowerShell startup and does not prove the script failed. PS Run Doctor records the environment, runs a target script, captures output, and reports whether the target script started, exited successfully, or failed.
+It is built for cases where a user sees confusing PowerShell startup noise, execution policy issues, missing-file errors, script prompts, or script failures and needs a clearer report of what happened.
 
 ## Requirements
 
 - Windows 10 or later
-- PowerShell 7 or later (`pwsh`)
+- PowerShell 7 or later (`pwsh.exe`)
+- A `.ps1` script to run
 
-## Quick Start
-
-If normal PowerShell script execution is the problem, start with the Windows command launcher. Double-click it to open the GUI:
+Check whether PowerShell 7 is installed:
 
 ```cmd
-Run-PSRunDoctor.cmd
+pwsh --version
 ```
 
-Or pass a script path to run console mode:
+If PowerShell 7 is missing, install it with:
+
+```cmd
+winget install --id Microsoft.PowerShell --source winget
+```
+
+After installing PowerShell 7, close and reopen Command Prompt or PowerShell before running PS Run Doctor again.
+
+## Setup
+
+1. Download or clone this repository.
+
+   ```cmd
+   gh repo clone VanyaHuaman/ps-run-doctor
+   ```
+
+2. Open Command Prompt.
+
+3. Change into the project folder.
+
+   ```cmd
+   cd C:\Users\vanya\ps-run-doctor
+   ```
+
+4. Start the GUI.
+
+   ```cmd
+   Run-PSRunDoctor.cmd
+   ```
+
+The `.cmd` launcher is intentional. It lets a user start the tool without first running a PowerShell script manually.
+
+## Use The GUI
+
+Use the GUI when the script may ask questions, show menus, pause, or need live input from the user.
+
+1. Run:
+
+   ```cmd
+   Run-PSRunDoctor.cmd
+   ```
+
+2. Click `Browse...`.
+
+3. Select the `.ps1` script you want to run.
+
+4. Leave `Suppress PowerShell update notice` checked unless you specifically want to see PowerShell startup update messages.
+
+5. Click `Run`.
+
+6. PS Run Doctor opens a new PowerShell 7 window.
+
+7. Answer prompts and review output in that PowerShell 7 window.
+
+8. When the script finishes, leave the window open long enough to review any errors.
+
+9. Find the report in:
+
+   ```text
+   reports\
+   ```
+
+The report filename is timestamped, for example:
+
+```text
+reports\ps-run-doctor-20260619-193806.txt
+```
+
+## What The GUI Report Includes
+
+Each GUI run writes a report with:
+
+- PowerShell executable path
+- PowerShell version and edition
+- operating system
+- administrator status
+- execution policy list
+- target script path
+- downloaded-file marker check
+- script output
+- script error output
+- final exit code
+- success or failure summary
+
+## Use The CLI
+
+Use the CLI when you want a fully captured diagnostic run in the current terminal.
+
+Run a script:
 
 ```cmd
 Run-PSRunDoctor.cmd path\to\YourScript.ps1
 ```
 
-The launcher runs through `cmd.exe`, then starts PowerShell 7 with a process-scoped execution policy bypass.
-
-From PowerShell 7, you can also run:
+Or run directly from PowerShell 7:
 
 ```powershell
-.\Invoke-PSRunDoctor.ps1 -ScriptPath .\YourScript.ps1
+pwsh -NoLogo -NoProfile -ExecutionPolicy Bypass -File .\Invoke-PSRunDoctor.ps1 -ScriptPath .\YourScript.ps1 -SuppressPowerShellUpdateCheck
 ```
 
-If script execution is blocked, start it with a process-scoped bypass:
-
-```powershell
-pwsh -NoLogo -NoProfile -ExecutionPolicy Bypass -File .\Invoke-PSRunDoctor.ps1 -ScriptPath .\YourScript.ps1
-```
-
-To pass arguments to the target script:
+Pass script arguments:
 
 ```powershell
 .\Invoke-PSRunDoctor.ps1 -ScriptPath .\YourScript.ps1 -ScriptArguments @('-Name', 'Test')
 ```
 
-To verify PS Run Doctor itself:
+Pass preset answers to a script that uses `Read-Host`:
+
+```powershell
+.\Invoke-PSRunDoctor.ps1 -ScriptPath .\YourScript.ps1 -InputText "06192026`nY" -SuppressPowerShellUpdateCheck
+```
+
+## Test Scripts
+
+The repo includes test scripts for verifying the tool:
 
 ```cmd
 Run-PSRunDoctor.cmd examples\hello-success.ps1
 Run-PSRunDoctor.cmd examples\hello-failure.ps1
+Run-PSRunDoctor.cmd examples\read-host-date.ps1
+Run-PSRunDoctor.cmd examples\read-host-multiple.ps1
 ```
 
-## What It Checks
+There is also a generic interactive test script:
 
-- PowerShell edition and version
-- Operating system
-- Whether the session is running as administrator
-- Execution policy by scope
-- Whether the target script exists
-- Whether the target script appears to be blocked by Mark-of-the-Web
-- Whether the target script starts and what exit code it returns
-- Standard output and error from the target script
+```text
+scripts\Test-PSRunDoctorInteractive.ps1
+```
 
-## GUI
-
-The GUI is launched by `Run-PSRunDoctor.cmd` when no script path is provided. It lets the user choose a `.ps1` file, run the check, copy the report, or save the report.
-
-The GUI is intentionally launched from the `.cmd` file so users do not have to run a PowerShell script manually first.
+To test it through the GUI, browse to that file and click `Run`.
 
 ## Update Notification Note
 
-PowerShell 7 has a built-in update notification feature. Microsoft documents that it runs at startup and can be controlled with the `POWERSHELL_UPDATECHECK` environment variable.
+PowerShell 7 can print an update notification at startup. That message does not prove the script failed.
 
-For one session, you can suppress that notice before starting a child PowerShell process:
+PS Run Doctor can suppress that startup notice for child PowerShell processes by setting:
 
 ```powershell
 $env:POWERSHELL_UPDATECHECK = 'Off'
 ```
 
-PS Run Doctor does not hide target script errors. It separates startup noise from the result of the script you meant to run.
+The GUI exposes this as `Suppress PowerShell update notice`.
 
-## Bootstrap Limits
+## Limits
 
-The `.cmd` launcher handles common script execution policy problems because it starts PowerShell with `-ExecutionPolicy Bypass` for that process only. It cannot bypass organization-managed policy, AppLocker, antivirus blocks, missing PowerShell 7, or a damaged Windows install.
+PS Run Doctor uses process-scoped execution policy bypass for the PowerShell process it starts. It does not change the machine's permanent execution policy.
 
-If the launcher cannot start PowerShell 7, that is useful evidence: the problem is earlier than the target script.
+It cannot bypass:
+
+- organization-managed execution policy
+- AppLocker or Windows Defender Application Control
+- antivirus blocks
+- missing PowerShell 7
+- missing script dependencies
+- broken paths inside the target script
+- scripts that require applications not installed on the machine, such as Excel automation scripts when Excel is missing
+
+If PS Run Doctor cannot start PowerShell 7, that is useful evidence: the problem is earlier than the target script.

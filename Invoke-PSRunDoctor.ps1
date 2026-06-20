@@ -6,6 +6,8 @@ param(
 
     [string[]]$ScriptArguments = @(),
 
+    [string]$InputText,
+
     [switch]$SuppressPowerShellUpdateCheck
 )
 
@@ -17,6 +19,7 @@ Import-Module $modulePath -Force
 $exitCode = Invoke-PSRunDoctor `
     -ScriptPath $ScriptPath `
     -ScriptArguments $ScriptArguments `
+    -InputText $InputText `
     -SuppressPowerShellUpdateCheck:$SuppressPowerShellUpdateCheck
 
 exit $exitCode

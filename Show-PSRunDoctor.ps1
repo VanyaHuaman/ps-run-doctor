@@ -16,8 +16,12 @@ Add-Type -AssemblyName System.Drawing
 $form = [System.Windows.Forms.Form]::new()
 $form.Text = 'PS Run Doctor'
 $form.StartPosition = 'CenterScreen'
-$form.MinimumSize = [System.Drawing.Size]::new(780, 560)
-$form.Size = [System.Drawing.Size]::new(920, 660)
+$form.MinimumSize = [System.Drawing.Size]::new(760, 420)
+$form.Size = [System.Drawing.Size]::new(920, 520)
+
+$margin = 18
+$fieldLeft = 104
+$gap = 12
 
 $title = [System.Windows.Forms.Label]::new()
 $title.Text = 'PS Run Doctor'
@@ -26,7 +30,7 @@ $title.Location = [System.Drawing.Point]::new(16, 14)
 $title.Size = [System.Drawing.Size]::new(860, 32)
 
 $status = [System.Windows.Forms.Label]::new()
-$status.Text = 'Choose a PowerShell script to diagnose.'
+$status.Text = 'Choose a PowerShell script to run in a new PowerShell 7 window.'
 $status.Font = [System.Drawing.Font]::new('Segoe UI', 10)
 $status.Location = [System.Drawing.Point]::new(18, 52)
 $status.Size = [System.Drawing.Size]::new(860, 24)
@@ -39,24 +43,26 @@ $scriptLabel.Size = [System.Drawing.Size]::new(80, 24)
 $scriptPath = [System.Windows.Forms.TextBox]::new()
 $scriptPath.Location = [System.Drawing.Point]::new(104, 89)
 $scriptPath.Size = [System.Drawing.Size]::new(610, 26)
-$scriptPath.Anchor = 'Top,Left,Right'
 
 $browseButton = [System.Windows.Forms.Button]::new()
 $browseButton.Text = 'Browse...'
 $browseButton.Location = [System.Drawing.Point]::new(728, 87)
-$browseButton.Size = [System.Drawing.Size]::new(88, 30)
-$browseButton.Anchor = 'Top,Right'
+$browseButton.Size = [System.Drawing.Size]::new(96, 30)
 
 $runButton = [System.Windows.Forms.Button]::new()
-$runButton.Text = 'Run Check'
-$runButton.Location = [System.Drawing.Point]::new(824, 87)
-$runButton.Size = [System.Drawing.Size]::new(82, 30)
-$runButton.Anchor = 'Top,Right'
+$runButton.Text = 'Run'
+$runButton.Location = [System.Drawing.Point]::new(832, 87)
+$runButton.Size = [System.Drawing.Size]::new(70, 30)
+
+$suppressUpdateCheck = [System.Windows.Forms.CheckBox]::new()
+$suppressUpdateCheck.Text = 'Suppress PowerShell update notice'
+$suppressUpdateCheck.Checked = $true
+$suppressUpdateCheck.Location = [System.Drawing.Point]::new(104, 128)
+$suppressUpdateCheck.Size = [System.Drawing.Size]::new(260, 24)
 
 $report = [System.Windows.Forms.TextBox]::new()
-$report.Location = [System.Drawing.Point]::new(18, 132)
-$report.Size = [System.Drawing.Size]::new(888, 430)
-$report.Anchor = 'Top,Bottom,Left,Right'
+$report.Location = [System.Drawing.Point]::new(18, 170)
+$report.Size = [System.Drawing.Size]::new(884, 268)
 $report.Multiline = $true
 $report.ScrollBars = 'Both'
 $report.WordWrap = $false
@@ -64,22 +70,44 @@ $report.ReadOnly = $true
 $report.Font = [System.Drawing.Font]::new('Consolas', 10)
 
 $copyButton = [System.Windows.Forms.Button]::new()
-$copyButton.Text = 'Copy Report'
-$copyButton.Location = [System.Drawing.Point]::new(18, 578)
+$copyButton.Text = 'Copy Info'
+$copyButton.Location = [System.Drawing.Point]::new(18, 454)
 $copyButton.Size = [System.Drawing.Size]::new(100, 30)
-$copyButton.Anchor = 'Bottom,Left'
 
 $saveButton = [System.Windows.Forms.Button]::new()
-$saveButton.Text = 'Save Report'
-$saveButton.Location = [System.Drawing.Point]::new(126, 578)
+$saveButton.Text = 'Save Info'
+$saveButton.Location = [System.Drawing.Point]::new(126, 454)
 $saveButton.Size = [System.Drawing.Size]::new(100, 30)
-$saveButton.Anchor = 'Bottom,Left'
 
 $closeButton = [System.Windows.Forms.Button]::new()
 $closeButton.Text = 'Close'
-$closeButton.Location = [System.Drawing.Point]::new(824, 578)
+$closeButton.Location = [System.Drawing.Point]::new(820, 454)
 $closeButton.Size = [System.Drawing.Size]::new(82, 30)
-$closeButton.Anchor = 'Bottom,Right'
+
+function Update-PSRDLayout {
+    $clientWidth = $form.ClientSize.Width
+    $clientHeight = $form.ClientSize.Height
+    $right = $clientWidth - $margin
+
+    $runButton.Location = [System.Drawing.Point]::new($right - $runButton.Width, 87)
+    $browseButton.Location = [System.Drawing.Point]::new($runButton.Left - $gap - $browseButton.Width, 87)
+
+    $scriptPath.Location = [System.Drawing.Point]::new($fieldLeft, 89)
+    $scriptPath.Size = [System.Drawing.Size]::new([Math]::Max(220, $browseButton.Left - $gap - $fieldLeft), 26)
+
+    $suppressUpdateCheck.Location = [System.Drawing.Point]::new($fieldLeft, 128)
+
+    $report.Location = [System.Drawing.Point]::new($margin, 170)
+    $report.Size = [System.Drawing.Size]::new([Math]::Max(360, $clientWidth - (2 * $margin)), [Math]::Max(160, $clientHeight - 218))
+
+    $bottom = $clientHeight - 48
+    $copyButton.Location = [System.Drawing.Point]::new($margin, $bottom)
+    $saveButton.Location = [System.Drawing.Point]::new($copyButton.Right + 16, $bottom)
+    $closeButton.Location = [System.Drawing.Point]::new($right - $closeButton.Width, $bottom)
+
+    $title.Size = [System.Drawing.Size]::new([Math]::Max(360, $clientWidth - (2 * $margin)), 32)
+    $status.Size = [System.Drawing.Size]::new([Math]::Max(360, $clientWidth - (2 * $margin)), 24)
+}
 
 $form.Controls.AddRange(@(
     $title,
@@ -88,11 +116,20 @@ $form.Controls.AddRange(@(
     $scriptPath,
     $browseButton,
     $runButton,
+    $suppressUpdateCheck,
     $report,
     $copyButton,
     $saveButton,
     $closeButton
 ))
+
+$form.Add_Shown({
+    Update-PSRDLayout
+})
+
+$form.Add_Resize({
+    Update-PSRDLayout
+})
 
 $browseButton.Add_Click({
     $dialog = [System.Windows.Forms.OpenFileDialog]::new()
@@ -119,61 +156,62 @@ $runButton.Add_Click({
 
     $runButton.Enabled = $false
     $browseButton.Enabled = $false
-    $status.Text = 'Running diagnostic check...'
+    $status.Text = 'Opening PowerShell 7 window...'
     $report.Text = ''
     $form.Refresh()
 
     try {
-        $runner = Join-Path $PSScriptRoot 'Invoke-PSRunDoctor.ps1'
+        $targetPath = (Resolve-Path -LiteralPath $scriptPath.Text -ErrorAction Stop).ProviderPath
+        $reportsDirectory = Join-Path $PSScriptRoot 'reports'
+        $reportName = 'ps-run-doctor-{0}.txt' -f (Get-Date -Format 'yyyyMMdd-HHmmss')
+        $reportPath = Join-Path $reportsDirectory $reportName
+        $consoleRunner = Join-Path $PSScriptRoot 'Start-PSRunDoctorConsole.ps1'
 
         $psi = [Diagnostics.ProcessStartInfo]::new()
         $psi.FileName = [Environment]::ProcessPath
         $psi.UseShellExecute = $false
-        $psi.RedirectStandardOutput = $true
-        $psi.RedirectStandardError = $true
-        $psi.Environment['POWERSHELL_UPDATECHECK'] = 'Off'
+        $psi.CreateNoWindow = $false
+
+        if ($suppressUpdateCheck.Checked) {
+            $psi.Environment['POWERSHELL_UPDATECHECK'] = 'Off'
+        }
+
+        $psi.ArgumentList.Add('-NoExit')
         $psi.ArgumentList.Add('-NoLogo')
         $psi.ArgumentList.Add('-NoProfile')
         $psi.ArgumentList.Add('-ExecutionPolicy')
         $psi.ArgumentList.Add('Bypass')
         $psi.ArgumentList.Add('-File')
-        $psi.ArgumentList.Add($runner)
+        $psi.ArgumentList.Add($consoleRunner)
         $psi.ArgumentList.Add('-ScriptPath')
-        $psi.ArgumentList.Add($scriptPath.Text)
-        $psi.ArgumentList.Add('-SuppressPowerShellUpdateCheck')
+        $psi.ArgumentList.Add($targetPath)
+        $psi.ArgumentList.Add('-ReportPath')
+        $psi.ArgumentList.Add($reportPath)
+        if ($suppressUpdateCheck.Checked) {
+            $psi.ArgumentList.Add('-SuppressPowerShellUpdateCheck')
+        }
 
-        $process = [Diagnostics.Process]::Start($psi)
-        $stdout = $process.StandardOutput.ReadToEnd()
-        $stderr = $process.StandardError.ReadToEnd()
-        $process.WaitForExit()
+        [void][Diagnostics.Process]::Start($psi)
 
         $text = [System.Text.StringBuilder]::new()
-        [void]$text.AppendLine("PS Run Doctor GUI")
-        [void]$text.AppendLine("Checked: $($scriptPath.Text)")
-        [void]$text.AppendLine("Exit code: $($process.ExitCode)")
+        [void]$text.AppendLine('PS Run Doctor GUI')
+        [void]$text.AppendLine("Launched: $targetPath")
+        [void]$text.AppendLine('Mode: New PowerShell 7 window')
+        [void]$text.AppendLine("Report: $reportPath")
+        [void]$text.AppendLine('Exit code: written to report after the script exits')
         [void]$text.AppendLine('')
-
-        if (-not [string]::IsNullOrWhiteSpace($stdout)) {
-            [void]$text.AppendLine($stdout.TrimEnd())
-        }
-
-        if (-not [string]::IsNullOrWhiteSpace($stderr)) {
-            [void]$text.AppendLine('')
-            [void]$text.AppendLine('== Launcher Errors ==')
-            [void]$text.AppendLine($stderr.TrimEnd())
-        }
+        [void]$text.AppendLine('The script is running in a separate PowerShell 7 window.')
+        [void]$text.AppendLine('Answer prompts and review output in that window.')
+        [void]$text.AppendLine('The window stays open after the script exits.')
+        [void]$text.AppendLine('The report file is written by the PowerShell 7 window.')
+        [void]$text.AppendLine('')
+        [void]$text.AppendLine('For captured diagnostics, use Invoke-PSRunDoctor.ps1 from PowerShell 7 or Run-PSRunDoctor.cmd with a script path.')
 
         $report.Text = $text.ToString()
-
-        if ($process.ExitCode -eq 0) {
-            $status.Text = 'Target script completed successfully.'
-        }
-        else {
-            $status.Text = 'Target script failed or returned a non-zero exit code.'
-        }
+        $status.Text = 'Opened target script in a new PowerShell 7 window.'
     }
     catch {
-        $status.Text = 'Could not run the diagnostic check.'
+        $status.Text = 'Could not open the PowerShell 7 window.'
         $report.Text = $_ | Out-String
     }
     finally {
@@ -185,7 +223,7 @@ $runButton.Add_Click({
 $copyButton.Add_Click({
     if (-not [string]::IsNullOrWhiteSpace($report.Text)) {
         [System.Windows.Forms.Clipboard]::SetText($report.Text)
-        $status.Text = 'Report copied to clipboard.'
+        $status.Text = 'Launch info copied to clipboard.'
     }
 })
 
@@ -195,13 +233,13 @@ $saveButton.Add_Click({
     }
 
     $dialog = [System.Windows.Forms.SaveFileDialog]::new()
-    $dialog.Title = 'Save diagnostic report'
+    $dialog.Title = 'Save launch info'
     $dialog.Filter = 'Text files (*.txt)|*.txt|All files (*.*)|*.*'
-    $dialog.FileName = 'ps-run-doctor-report.txt'
+    $dialog.FileName = 'ps-run-doctor-launch-info.txt'
 
     if ($dialog.ShowDialog($form) -eq [System.Windows.Forms.DialogResult]::OK) {
         [System.IO.File]::WriteAllText($dialog.FileName, $report.Text)
-        $status.Text = "Report saved: $($dialog.FileName)"
+        $status.Text = "Launch info saved: $($dialog.FileName)"
     }
 })
 
