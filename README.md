@@ -28,9 +28,25 @@ After installing PowerShell 7, close and reopen Command Prompt or PowerShell bef
 
 1. Download or clone this repository.
 
+   If GitHub CLI is installed, run:
+
    ```cmd
    gh repo clone VanyaHuaman/ps-run-doctor
    ```
+
+   If GitHub CLI is not installed:
+
+   1. Open this page in a browser:
+
+      ```text
+      https://github.com/VanyaHuaman/ps-run-doctor
+      ```
+
+   2. Click `Code`.
+
+   3. Click `Download ZIP`.
+
+   4. Extract the ZIP file.
 
 2. Open Command Prompt.
 
@@ -48,6 +64,22 @@ After installing PowerShell 7, close and reopen Command Prompt or PowerShell bef
 
 The `.cmd` launcher is intentional. It lets a user start the tool without first running a PowerShell script manually.
 
+## Confirm PowerShell 7
+
+From Command Prompt:
+
+```cmd
+where pwsh
+pwsh --version
+```
+
+Expected result:
+
+- `where pwsh` prints the path to `pwsh.exe`
+- `pwsh --version` prints a PowerShell 7 version, such as `PowerShell 7.5.5`
+
+The GUI also shows the PowerShell 7 version and executable path near the top of the window.
+
 ## Use The GUI
 
 Use the GUI when the script may ask questions, show menus, pause, or need live input from the user.
@@ -64,15 +96,17 @@ Use the GUI when the script may ask questions, show menus, pause, or need live i
 
 4. Leave `Suppress PowerShell update notice` checked unless you specifically want to see PowerShell startup update messages.
 
-5. Click `Run`.
+5. If the script needs administrator rights, check `Run PowerShell 7 as administrator`.
 
-6. PS Run Doctor opens a new PowerShell 7 window.
+6. Click `Run`.
 
-7. Answer prompts and review output in that PowerShell 7 window.
+7. PS Run Doctor opens a new PowerShell 7 window.
 
-8. When the script finishes, leave the window open long enough to review any errors.
+8. Answer prompts and review output in that PowerShell 7 window.
 
-9. Find the report in:
+9. When the script finishes, leave the window open long enough to review any errors.
+
+10. Find the report in:
 
    ```text
    reports\
@@ -83,6 +117,42 @@ The report filename is timestamped, for example:
 ```text
 reports\ps-run-doctor-20260619-193806.txt
 ```
+
+## Administrator Mode
+
+Some scripts need administrator rights to write protected folders, install software, change system settings, or access machine-wide configuration.
+
+In the GUI:
+
+1. Select the script.
+
+2. Check `Run PowerShell 7 as administrator`.
+
+3. Click `Run`.
+
+4. Accept the Windows UAC prompt.
+
+The report will show whether the PowerShell 7 process was running as administrator.
+
+## Making PowerShell 7 The Practical Default
+
+Windows includes Windows PowerShell 5.1 as `powershell.exe`. PowerShell 7 is `pwsh.exe`. They can both be installed at the same time.
+
+PS Run Doctor does not change the system file association for `.ps1` files. Changing `.ps1` double-click behavior through the registry can create support and security problems.
+
+Safer options:
+
+- Use `Run-PSRunDoctor.cmd` to open scripts through PowerShell 7.
+- Create a desktop shortcut to `Run-PSRunDoctor.cmd`.
+- Run scripts explicitly with `pwsh`.
+
+Example:
+
+```cmd
+pwsh -NoLogo -NoProfile -ExecutionPolicy Bypass -File C:\Path\To\Script.ps1
+```
+
+To make Windows Terminal open PowerShell 7 by default, change the default profile in Windows Terminal settings to `PowerShell`.
 
 ## What The GUI Report Includes
 

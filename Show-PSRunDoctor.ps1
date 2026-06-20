@@ -35,34 +35,46 @@ $status.Font = [System.Drawing.Font]::new('Segoe UI', 10)
 $status.Location = [System.Drawing.Point]::new(18, 52)
 $status.Size = [System.Drawing.Size]::new(860, 24)
 
+$environmentInfo = [System.Windows.Forms.Label]::new()
+$environmentInfo.Text = "PowerShell 7: $($PSVersionTable.PSVersion) at $([Environment]::ProcessPath)"
+$environmentInfo.Font = [System.Drawing.Font]::new('Segoe UI', 9)
+$environmentInfo.Location = [System.Drawing.Point]::new(18, 74)
+$environmentInfo.Size = [System.Drawing.Size]::new(860, 22)
+
 $scriptLabel = [System.Windows.Forms.Label]::new()
 $scriptLabel.Text = 'Script'
-$scriptLabel.Location = [System.Drawing.Point]::new(18, 92)
+$scriptLabel.Location = [System.Drawing.Point]::new(18, 112)
 $scriptLabel.Size = [System.Drawing.Size]::new(80, 24)
 
 $scriptPath = [System.Windows.Forms.TextBox]::new()
-$scriptPath.Location = [System.Drawing.Point]::new(104, 89)
+$scriptPath.Location = [System.Drawing.Point]::new(104, 109)
 $scriptPath.Size = [System.Drawing.Size]::new(610, 26)
 
 $browseButton = [System.Windows.Forms.Button]::new()
 $browseButton.Text = 'Browse...'
-$browseButton.Location = [System.Drawing.Point]::new(728, 87)
+$browseButton.Location = [System.Drawing.Point]::new(728, 107)
 $browseButton.Size = [System.Drawing.Size]::new(96, 30)
 
 $runButton = [System.Windows.Forms.Button]::new()
 $runButton.Text = 'Run'
-$runButton.Location = [System.Drawing.Point]::new(832, 87)
+$runButton.Location = [System.Drawing.Point]::new(832, 107)
 $runButton.Size = [System.Drawing.Size]::new(70, 30)
 
 $suppressUpdateCheck = [System.Windows.Forms.CheckBox]::new()
 $suppressUpdateCheck.Text = 'Suppress PowerShell update notice'
 $suppressUpdateCheck.Checked = $true
-$suppressUpdateCheck.Location = [System.Drawing.Point]::new(104, 128)
+$suppressUpdateCheck.Location = [System.Drawing.Point]::new(104, 148)
 $suppressUpdateCheck.Size = [System.Drawing.Size]::new(260, 24)
 
+$runAsAdmin = [System.Windows.Forms.CheckBox]::new()
+$runAsAdmin.Text = 'Run PowerShell 7 as administrator'
+$runAsAdmin.Checked = $false
+$runAsAdmin.Location = [System.Drawing.Point]::new(380, 148)
+$runAsAdmin.Size = [System.Drawing.Size]::new(260, 24)
+
 $report = [System.Windows.Forms.TextBox]::new()
-$report.Location = [System.Drawing.Point]::new(18, 170)
-$report.Size = [System.Drawing.Size]::new(884, 268)
+$report.Location = [System.Drawing.Point]::new(18, 190)
+$report.Size = [System.Drawing.Size]::new(884, 248)
 $report.Multiline = $true
 $report.ScrollBars = 'Both'
 $report.WordWrap = $false
@@ -89,16 +101,17 @@ function Update-PSRDLayout {
     $clientHeight = $form.ClientSize.Height
     $right = $clientWidth - $margin
 
-    $runButton.Location = [System.Drawing.Point]::new($right - $runButton.Width, 87)
-    $browseButton.Location = [System.Drawing.Point]::new($runButton.Left - $gap - $browseButton.Width, 87)
+    $runButton.Location = [System.Drawing.Point]::new($right - $runButton.Width, 107)
+    $browseButton.Location = [System.Drawing.Point]::new($runButton.Left - $gap - $browseButton.Width, 107)
 
-    $scriptPath.Location = [System.Drawing.Point]::new($fieldLeft, 89)
+    $scriptPath.Location = [System.Drawing.Point]::new($fieldLeft, 109)
     $scriptPath.Size = [System.Drawing.Size]::new([Math]::Max(220, $browseButton.Left - $gap - $fieldLeft), 26)
 
-    $suppressUpdateCheck.Location = [System.Drawing.Point]::new($fieldLeft, 128)
+    $suppressUpdateCheck.Location = [System.Drawing.Point]::new($fieldLeft, 148)
+    $runAsAdmin.Location = [System.Drawing.Point]::new($suppressUpdateCheck.Right + 18, 148)
 
-    $report.Location = [System.Drawing.Point]::new($margin, 170)
-    $report.Size = [System.Drawing.Size]::new([Math]::Max(360, $clientWidth - (2 * $margin)), [Math]::Max(160, $clientHeight - 218))
+    $report.Location = [System.Drawing.Point]::new($margin, 190)
+    $report.Size = [System.Drawing.Size]::new([Math]::Max(360, $clientWidth - (2 * $margin)), [Math]::Max(140, $clientHeight - 238))
 
     $bottom = $clientHeight - 48
     $copyButton.Location = [System.Drawing.Point]::new($margin, $bottom)
@@ -107,16 +120,19 @@ function Update-PSRDLayout {
 
     $title.Size = [System.Drawing.Size]::new([Math]::Max(360, $clientWidth - (2 * $margin)), 32)
     $status.Size = [System.Drawing.Size]::new([Math]::Max(360, $clientWidth - (2 * $margin)), 24)
+    $environmentInfo.Size = [System.Drawing.Size]::new([Math]::Max(360, $clientWidth - (2 * $margin)), 22)
 }
 
 $form.Controls.AddRange(@(
     $title,
     $status,
+    $environmentInfo,
     $scriptLabel,
     $scriptPath,
     $browseButton,
     $runButton,
     $suppressUpdateCheck,
+    $runAsAdmin,
     $report,
     $copyButton,
     $saveButton,
@@ -169,10 +185,13 @@ $runButton.Add_Click({
 
         $psi = [Diagnostics.ProcessStartInfo]::new()
         $psi.FileName = [Environment]::ProcessPath
-        $psi.UseShellExecute = $false
+        $psi.UseShellExecute = $runAsAdmin.Checked
         $psi.CreateNoWindow = $false
+        if ($runAsAdmin.Checked) {
+            $psi.Verb = 'runas'
+        }
 
-        if ($suppressUpdateCheck.Checked) {
+        if ($suppressUpdateCheck.Checked -and -not $runAsAdmin.Checked) {
             $psi.Environment['POWERSHELL_UPDATECHECK'] = 'Off'
         }
 
@@ -197,6 +216,9 @@ $runButton.Add_Click({
         [void]$text.AppendLine('PS Run Doctor GUI')
         [void]$text.AppendLine("Launched: $targetPath")
         [void]$text.AppendLine('Mode: New PowerShell 7 window')
+        [void]$text.AppendLine("PowerShell 7: $([Environment]::ProcessPath)")
+        [void]$text.AppendLine("PowerShell version: $($PSVersionTable.PSVersion)")
+        [void]$text.AppendLine("Run as administrator: $($runAsAdmin.Checked)")
         [void]$text.AppendLine("Report: $reportPath")
         [void]$text.AppendLine('Exit code: written to report after the script exits')
         [void]$text.AppendLine('')
@@ -204,6 +226,9 @@ $runButton.Add_Click({
         [void]$text.AppendLine('Answer prompts and review output in that window.')
         [void]$text.AppendLine('The window stays open after the script exits.')
         [void]$text.AppendLine('The report file is written by the PowerShell 7 window.')
+        if ($runAsAdmin.Checked -and $suppressUpdateCheck.Checked) {
+            [void]$text.AppendLine('Note: update-notice suppression is applied by the report wrapper after the elevated window starts.')
+        }
         [void]$text.AppendLine('')
         [void]$text.AppendLine('For captured diagnostics, use Invoke-PSRunDoctor.ps1 from PowerShell 7 or Run-PSRunDoctor.cmd with a script path.')
 
